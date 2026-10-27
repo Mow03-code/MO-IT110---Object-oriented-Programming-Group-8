@@ -1,60 +1,83 @@
 package Backend;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+
 public class LeaveRecord {
-  private String employeeId;
-private String leaveType;
-private String startDate;
-private String endDate;
-private String approvalStatus;
-private String paidStatus;  
-public LeaveRecord(String employeeId, String leaveType, String startDate, String endDate, String approvalStatus, String paidStatus) {
-    this.employeeId = employeeId;
-    this.leaveType = leaveType;
-    this.startDate = startDate;
-    this.endDate = endDate;
-    this.approvalStatus = approvalStatus;
-    this.paidStatus = paidStatus;
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 
-}public String getEmployeeId() {
-    return employeeId;
-}
+    private final String employeeId;
+    private final String leaveType;     // e.g., Sick, Vacation, Emergency (values, not subclasses)
+    private final LocalDate startDate;
+    private final LocalDate endDate;
+    private String approvalStatus;      // Pending, Approved, or Declined
+    private final String paidStatus;    // Paid or Unpaid, checked by PayrollProcessor
 
-public String getLeaveType() {
-    return leaveType;
-}
+    public LeaveRecord(String employeeId, String leaveType, String startDate, String endDate,
+                       String approvalStatus, String paidStatus) {
+        LocalDate start = LocalDate.parse(startDate, DATE_FORMAT);
+        LocalDate end = LocalDate.parse(endDate, DATE_FORMAT);
 
-public String getStartDate() {
-    return startDate;
-}
+        // Validation rule: enforce a valid date range before duration is calculated
+        if (end.isBefore(start)) {
+            throw new IllegalArgumentException("End date cannot be before start date.");
+        }
 
-public String getEndDate() {
-    return endDate;
-}
+        this.employeeId = employeeId;
+        this.leaveType = leaveType;
+        this.startDate = start;
+        this.endDate = end;
+        this.approvalStatus = approvalStatus;
+        this.paidStatus = paidStatus;
+    }
 
-public String getApprovalStatus() {
-    return approvalStatus;
-}
+    public String getEmployeeId() {
+        return employeeId;
+    }
 
-public String getPaidStatus() {
-    return paidStatus;
-}
-public int getDuration() {
-    String[] startParts = startDate.split("-");
-    String[] endParts = endDate.split("-");
-    int startDay = Integer.parseInt(startParts[1]);
-    int endDay = Integer.parseInt(endParts[1]);
-    int duration = (endDay - startDay) + 1;
-    return duration;
-}
-public static void main(String[] args) {
-    LeaveRecord leave1 = new LeaveRecord("10001", "Vacation", "10-26-2026", "10-28-2026", "Approved", "Paid");
+    public String getLeaveType() {
+        return leaveType;
+    }
 
-    System.out.println("Employee ID: " + leave1.getEmployeeId());
-    System.out.println("Leave Type: " + leave1.getLeaveType());
-    System.out.println("Start Date: " + leave1.getStartDate());
-    System.out.println("End Date: " + leave1.getEndDate());
-    System.out.println("Approval Status: " + leave1.getApprovalStatus());
-    System.out.println("Paid Status: " + leave1.getPaidStatus());
-    System.out.println("Duration: " + leave1.getDuration() + " day(s)");
-}
+    public String getStartDate() {
+        return startDate.format(DATE_FORMAT);
+    }
+
+    public String getEndDate() {
+        return endDate.format(DATE_FORMAT);
+    }
+
+    public String getApprovalStatus() {
+        return approvalStatus;
+    }
+
+    public String getPaidStatus() {
+        return paidStatus;
+    }
+
+    // Retrieves the total APPROVED leave duration in days (start and end date included).
+    // Read-only; returns 0 while the leave is Pending or Declined.
+    public int getDuration() {
+        if (!"Approved".equalsIgnoreCase(approvalStatus)) {
+            return 0;
+        }
+        return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
+    }
+
+    public static void main(String[] args) {
+        LeaveRecord leave1 = new LeaveRecord("10001", "Vacation", "10-26-2026", "10-28-2026", "Approved", "Paid");
+        LeaveRecord leave2 = new LeaveRecord("10001", "Sick", "10-30-2026", "11-02-2026", "Approved", "Paid");
+        LeaveRecord leave3 = new LeaveRecord("10001", "Emergency", "11-05-2026", "11-06-2026", "Pending", "Unpaid");
+
+        System.out.println("Employee ID: " + leave1.getEmployeeId());
+        System.out.println("Leave Type: " + leave1.getLeaveType());
+        System.out.println("Start Date: " + leave1.getStartDate());
+        System.out.println("End Date: " + leave1.getEndDate());
+        System.out.println("Approval Status: " + leave1.getApprovalStatus());
+        System.out.println("Paid Status: " + leave1.getPaidStatus());
+        System.out.println("Duration: " + leave1.getDuration() + " day(s)");
+        System.out.println("Cross-month leave (Oct 30 - Nov 2): " + leave2.getDuration() + " day(s)");
+        System.out.println("Pending leave duration: " + leave3.getDuration() + " day(s)");
+    }
 }

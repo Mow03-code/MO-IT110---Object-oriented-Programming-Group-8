@@ -27,7 +27,7 @@ public String getTimeIn() {
 public String getTimeOut() {
     return timeOut;
 }
-public double computeHoursWorked() {
+public double calculateHoursWorked() {
     String[] inParts = timeIn.split(":");
     String[] outParts = timeOut.split(":");
     int inMinutes = Integer.parseInt(inParts[0]) * 60 + Integer.parseInt(inParts[1]);
@@ -42,7 +42,7 @@ public static void main(String[] args) {
     System.out.println("Date: " + record1.getDate());
     System.out.println("Time In: " + record1.getTimeIn());
     System.out.println("Time Out: " + record1.getTimeOut());
-    System.out.println("Hours Worked: " + record1.computeHoursWorked());
+    System.out.println("Hours Worked: " + record1.calculateHoursWorked());
 }
    } 
     
