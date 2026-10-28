@@ -153,8 +153,6 @@ public class MainMenu extends JFrame {
         //We define here the format of date and time.
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        LocalTime loginTime = LocalTime.parse(record[4], timeFormatter);
-        LocalTime logoutTime = LocalTime.parse(record[5], timeFormatter);
 
         Map<Integer, Double> weeklyHoursMap = new LinkedHashMap<>();
         
@@ -164,7 +162,7 @@ public class MainMenu extends JFrame {
                 String[] record = parseCSVLine(line);
                 
                 //This ensure that the records has has enough fields and can able to determine the username.
-                if (record.length >= 5 && record[0].equals(employeeID)) {
+                if (record.length >= 6 && record[0].equals(employeeID)) {
                     LocalDate date = LocalDate.parse(record[3], dateFormatter);
                     int weekNumber = (date.getDayOfYear() - 1) / 7 + 1; // This determine which week number it is in a year.
 

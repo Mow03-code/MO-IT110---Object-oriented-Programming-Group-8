@@ -23,9 +23,10 @@ import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
-import com.github.lgooddatepicker.components.DatePicker;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import javax.swing.JComboBox;
 
 /**
@@ -55,7 +56,7 @@ public class NewEmployee {
         };
 
         JTextField[] textFields = new JTextField[labels.length];
-        final DatePicker[] birthdayPicker = new DatePicker[1];
+        final JTextField[] birthdayField = new JTextField[1];
         JComboBox<String> statusCombo = new JComboBox<>(new String[] {
             "Regular", "Probationary"
         });
@@ -68,9 +69,10 @@ public class NewEmployee {
             gbc.gridx = 1;
 
             if (i == 3) { //Birthday field
-                birthdayPicker[0] = new DatePicker();
-                birthdayPicker[0].setDateToToday();
-                panel.add(birthdayPicker[0], gbc);
+                birthdayField[0] = new JTextField(20);
+                birthdayField[0].setText(LocalDate.now().format(DateTimeFormatter.ofPattern("MM-dd-uuuu")));
+                birthdayField[0].setToolTipText("Enter date as MM-dd-yyyy");
+                panel.add(birthdayField[0], gbc);
 
             } else if (i == 10) { // Status field
                 panel.add(statusCombo, gbc);
@@ -117,12 +119,19 @@ public class NewEmployee {
 
             for (int i = 0; i < labels.length; i++) {
                 if (i == 3) {
-                    LocalDate selectedDate = birthdayPicker[0].getDate();
-                    if (selectedDate == null) {
-                        JOptionPane.showMessageDialog(formFrame, "Please select a Birthday.", "Missing Field", JOptionPane.WARNING_MESSAGE);
+                    String dateInput = birthdayField[0].getText().trim();
+                    LocalDate selectedDate;
+                    DateTimeFormatter birthdayFormatter = DateTimeFormatter.ofPattern("MM-dd-uuuu")
+                            .withResolverStyle(ResolverStyle.STRICT);
+                    try {
+                        selectedDate = LocalDate.parse(dateInput, birthdayFormatter);
+                    } catch (DateTimeParseException ex) {
+                        JOptionPane.showMessageDialog(formFrame, "Please enter a valid Birthday as MM-dd-yyyy.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+                        birthdayField[0].setBackground(Color.PINK);
+                        birthdayField[0].requestFocus();
                         return;
                     }
-                    String formatted = selectedDate.format(DateTimeFormatter.ofPattern("MM-dd-yyyy"));
+                    String formatted = selectedDate.format(birthdayFormatter);
                     newEmployee[i] = removeQuotes(formatted);
                 } else if (i == 10) {
                     newEmployee[i] = removeQuotes((String) statusCombo.getSelectedItem());

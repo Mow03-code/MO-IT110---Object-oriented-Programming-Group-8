@@ -89,7 +89,7 @@ public class ViewEmployee extends JFrame {
         
         //We make a drop down menu wherein the user can choose a month then compute the salary of the selected employee
         // Month names
-        String[] months = months = Arrays.stream(Month.values())
+        String[] months = Arrays.stream(Month.values())
             .map(m -> m.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH))
             .toArray(String[]::new);
         JComboBox<String> monthSelector = new JComboBox<>(months);

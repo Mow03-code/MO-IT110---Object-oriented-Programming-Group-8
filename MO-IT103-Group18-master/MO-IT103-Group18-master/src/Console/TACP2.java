@@ -455,7 +455,7 @@ public class TACP2 {
 
         double totalDeductions = sss + philHealth + pagIbig + withholdingTax;
         double totalAllowance = riceSubsidy + phoneAllowance + clothingAllowance;
-        double netSalary = grossSalary - totalDeductions;
+        double netSalary = grossSalary + totalAllowance - totalDeductions;
 
         System.out.println("\n--- Payslip details for Employee #" + empNumber + " ---");
         System.out.printf("Gross Salary: PHP %.2f%n", grossSalary);
@@ -524,6 +524,7 @@ public class TACP2 {
         System.out.printf("Pag-IBIG: PHP %.2f%n", pagIbig);
         System.out.printf("Withholding Tax: PHP %.2f%n", withholdingTax);
         System.out.printf("Total Deductions: PHP %.2f%n", totalDeductions);
+        System.out.printf("Total Allowances: PHP %.2f%n", totalAllowance);
         System.out.printf("Net Salary: PHP %.2f%n", netSalary);
         
     } catch (Exception e) {

@@ -17,7 +17,6 @@ import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
-import com.github.lgooddatepicker.components.DatePicker;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -82,7 +81,7 @@ public class ManageEmployeePanelForUpdateAndDelete {
         //Here we create an array of textfields that equals to the number of labels
         JTextField[] textFields = new JTextField[labels.length];
         String[] originalValues = new String[labels.length];
-        final DatePicker[] birthdayPicker = new DatePicker[1];
+        JTextField birthdayField = new JTextField(19);
         JComboBox<String> statusCombo = new JComboBox<>(new String[] {
             "Regular", "Probationary"
         });
@@ -97,18 +96,17 @@ public class ManageEmployeePanelForUpdateAndDelete {
             gbc.anchor = GridBagConstraints.WEST;
 
             if (i == 3) { //Use DatePicker for Birthday
-                birthdayPicker[0] = new DatePicker();
                 String cleanedValue = cleanQuotes(employeeDetails[i]);
                 if (!cleanedValue.isEmpty()) {
                     try {
-                        LocalDate parsedDate = LocalDate.parse(cleanedValue, DateTimeFormatter.ofPattern("MM-dd-yyyy"));
-                        birthdayPicker[0].setDate(parsedDate);
+                        LocalDate.parse(cleanedValue, DateTimeFormatter.ofPattern("MM-dd-yyyy"));
                     } catch (Exception ex) {
                         System.err.println("Invalid date format for birthday: " + cleanedValue);
                     }
                 }
+                birthdayField.setText(cleanedValue);
                 originalValues[i] = cleanedValue;
-                detailsPanel.add(birthdayPicker[0], gbc);
+                detailsPanel.add(birthdayField, gbc);
             } else if (i==10){
                 String cleanedStatus = cleanQuotes(employeeDetails[1]);
                 statusCombo.setSelectedItem(cleanedStatus);
@@ -182,25 +180,23 @@ public class ManageEmployeePanelForUpdateAndDelete {
             });
         }
         
-        birthdayPicker[0].addDateChangeListener(e -> {
-            String selectedDate = (birthdayPicker[0].getDate() != null)
-                ? birthdayPicker[0].getDate().format(DateTimeFormatter.ofPattern("MM-dd-yyyy"))
-                : "";
-
-            if (!selectedDate.equals(originalValues[3])) {
-                updateButton.setEnabled(true);
-            } else {
-                // Optional: reset if user changes back to original date
-                boolean fieldChanged = false;
-                for (int i = 1; i < textFields.length; i++) {
-                    if (i == 3) continue; // skip birthday, already handled
-                    if (!textFields[i].getText().equals(originalValues[i])) {
-                        fieldChanged = true;
-                        break;
+        birthdayField.getDocument().addDocumentListener(new DocumentListener() {
+            private void checkForChanges() {
+                boolean fieldChanged = !birthdayField.getText().equals(originalValues[3]);
+                for (int i = 1; i < textFields.length && !fieldChanged; i++) {
+                    if (i != 3 && i != 10 && textFields[i] != null) {
+                        fieldChanged = !textFields[i].getText().equals(originalValues[i]);
                     }
                 }
                 updateButton.setEnabled(fieldChanged);
             }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) { checkForChanges(); }
+            @Override
+            public void removeUpdate(DocumentEvent e) { checkForChanges(); }
+            @Override
+            public void changedUpdate(DocumentEvent e) { checkForChanges(); }
         });
 
         
@@ -220,11 +216,20 @@ public class ManageEmployeePanelForUpdateAndDelete {
             for (int i = 0; i < textFields.length; i++) {
                 final int fieldIndex = i;
                 if (fieldIndex == 3) {
-                    // Handle birthday using the DatePicker
-                    LocalDate selected = birthdayPicker[0].getDate();
-                    updatedEmployee[fieldIndex] = (selected != null)
-                        ? UpdateEmployee.removeQuotation(selected.format(DateTimeFormatter.ofPattern("MM-dd-yyyy")))
-                            : "";
+                    String input = birthdayField.getText().trim();
+                    if (!input.isEmpty()) {
+                        try {
+                            LocalDate.parse(input, DateTimeFormatter.ofPattern("MM-dd-yyyy"));
+                        } catch (Exception ex) {
+                            JOptionPane.showMessageDialog(manageFrame,
+                                "Field \"" + labels[fieldIndex] + "\" must use MM-dd-yyyy format.",
+                                "Invalid Input", JOptionPane.WARNING_MESSAGE);
+                            birthdayField.setBackground(Color.PINK);
+                            birthdayField.requestFocus();
+                            return;
+                        }
+                    }
+                    updatedEmployee[fieldIndex] = UpdateEmployee.removeQuotation(input);
                 }else if (fieldIndex == 10) {
                     updatedEmployee[fieldIndex] = UpdateEmployee.removeQuotation((String) statusCombo.getSelectedItem());
                 }else {
