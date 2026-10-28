@@ -5,6 +5,8 @@ package GUI;
  * @author Nichie
  */
 
+import Backend.Employee;
+import Backend.PayrollDataLoader;
 import javax.swing.*;
 import java.awt.*;
 import java.time.Month;
@@ -13,9 +15,10 @@ import java.util.Locale;
 
 
 public class ViewEmployee extends JFrame {
-    //File paths for our CSV files
-    public static final String EMPLOYEE_DETAILS_CSV = "MO-IT103-Group18-master/src/payroll/hub/databases/MotorPH Employee Data - Employee Details.csv";
-    public static final String ATTENDANCE_RECORD_CSV = "MO-IT103-Group18-master/src/payroll/hub/databases/Copy of MotorPH Employee Data - Attendance Record.csv";
+    //File paths for our CSV files (now defined once in PayrollDataLoader, which finds the
+    //databases folder whether the app runs from NetBeans or from the repository root)
+    public static final String EMPLOYEE_DETAILS_CSV = PayrollDataLoader.EMPLOYEE_DETAILS_CSV;
+    public static final String ATTENDANCE_RECORD_CSV = PayrollDataLoader.ATTENDANCE_RECORD_CSV;
    
     //It display an employee data when a row is selected in the table
     public static void viewEmployeeDetails(JTable table) {
@@ -94,15 +97,14 @@ public class ViewEmployee extends JFrame {
             .toArray(String[]::new);
         JComboBox<String> monthSelector = new JComboBox<>(months);
 
-        // Year options (e.g., current year ± 2)
-        int currentYear = java.time.Year.now().getValue();
-        String[] years = {
-            String.valueOf(currentYear - 1),
-            String.valueOf(currentYear),
-            String.valueOf(currentYear + 1)
-        };
+        // Year options come from the years that actually have attendance data.
+        // (Previously current year ± 1, so 2024 data could never be selected and salary always showed 0.)
+        String[] years = PayrollDataLoader.getAttendanceYears();
+        if (years.length == 0) {
+            years = new String[]{String.valueOf(java.time.Year.now().getValue())};
+        }
         JComboBox<String> yearSelector = new JComboBox<>(years);
-        yearSelector.setSelectedItem(String.valueOf(currentYear)); // Default to this year
+        yearSelector.setSelectedItem(years[years.length - 1]); // Default to the latest year with data
         JButton computeSalaryButton = ButtonsStyle.ButtonStyle2("Compute Salary");
         
          //It adds the components to the panel
@@ -124,9 +126,11 @@ public class ViewEmployee extends JFrame {
         computeSalaryButton.addActionListener(e -> {
             String selectedMonth = (String) monthSelector.getSelectedItem();
             String selectedYear = (String) yearSelector.getSelectedItem();
-            double totalHoursWorked = TotalMonthlyHours.computeTotalMonthlyHours(employeeID, selectedMonth, selectedYear);
-            double hourlyRate = HourlyRate.getHourlyRate(employeeID);
-            double salary = totalHoursWorked * hourlyRate;
+            // Hours and salary now come from the backend (AttendanceRecord + Employee)
+            double totalHoursWorked = PayrollDataLoader.getTotalHoursWorked(employeeID,
+                    Month.valueOf(selectedMonth.toUpperCase()), Integer.parseInt(selectedYear));
+            Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+            double salary = (employee != null) ? employee.calculateSalary(totalHoursWorked) : 0;
             String employeeDetails = detailsBuilder.toString();
             
            displayComputedSalary(detailsFrame, employeeDetails, employeeID, selectedMonth, totalHoursWorked, salary);
