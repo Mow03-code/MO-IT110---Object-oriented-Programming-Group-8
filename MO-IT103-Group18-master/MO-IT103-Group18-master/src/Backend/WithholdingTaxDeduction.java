@@ -2,29 +2,29 @@ package Backend;
 
 public class WithholdingTaxDeduction extends DeductionCalculator {
 
-    public WithholdingTaxDeduction(double grossPay) {
-        super(grossPay);
-    }
-
+    // BIR withholding tax bracket table. The argument is the tax basis chosen by the
+    // caller (PayrollProcessor decides whether this is gross pay or taxable income).
     @Override
-    public double computeDeduction() {
+    public double computeDeduction(double grossPay) {
+        double amount;
         if (grossPay <= 20833) {
-            return 0;
+            amount = 0;
         } else if (grossPay <= 33332) {
-            return (grossPay - 20833) * 0.20;
+            amount = (grossPay - 20833) * 0.20;
         } else if (grossPay <= 66666) {
-            return 2500 + (grossPay - 33332) * 0.25;
+            amount = 2500 + (grossPay - 33332) * 0.25;
         } else if (grossPay <= 166666) {
-            return 10833.33 + (grossPay - 66666) * 0.30;
+            amount = 10833.33 + (grossPay - 66666) * 0.30;
         } else if (grossPay <= 666666) {
-            return 40833.33 + (grossPay - 166666) * 0.32;
+            amount = 40833.33 + (grossPay - 166666) * 0.32;
         } else {
-            return 200833.33 + (grossPay - 666666) * 0.35;
+            amount = 200833.33 + (grossPay - 666666) * 0.35;
         }
+        return recordAmount(amount);
     }
 
     public static void main(String[] args) {
-        WithholdingTaxDeduction tax = new WithholdingTaxDeduction(25000);
-        System.out.println("Withholding Tax: " + tax.computeDeduction());
+        WithholdingTaxDeduction tax = new WithholdingTaxDeduction();
+        System.out.println("Withholding Tax (25,000): " + tax.computeDeduction(25000));
     }
 }

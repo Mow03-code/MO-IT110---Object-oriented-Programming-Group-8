@@ -2,18 +2,14 @@ package Backend;
 
 public class PagIbigDeduction extends DeductionCalculator {
 
-    public PagIbigDeduction(double grossPay) {
-        super(grossPay);
-    }
-
+    // 2% of salary, capped at P100
     @Override
-    public double computeDeduction() {
-        return Math.min(grossPay * 0.02, 100);
+    public double computeDeduction(double grossPay) {
+        return recordAmount(Math.min(grossPay * 0.02, 100));
     }
 
     public static void main(String[] args) {
-        PagIbigDeduction pagIbig1 = new PagIbigDeduction(25000.0);
-        System.out.println("Gross Pay: " + pagIbig1.grossPay);
-        System.out.println("Pag-IBIG Deduction: " + pagIbig1.computeDeduction());
+        PagIbigDeduction pagIbig1 = new PagIbigDeduction();
+        System.out.println("Pag-IBIG Deduction (25,000): " + pagIbig1.computeDeduction(25000.0));
     }
 }

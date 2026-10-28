@@ -17,6 +17,7 @@ public class RegularOvertime extends OvertimeRecord {
     }
 
     public static void main(String[] args) {
+        // 08:00-19:00 = 11 hrs - 1 hr break = 10 hrs worked -> 2 overtime hours
         RegularOvertime ot = new RegularOvertime("10001", "10-26-2026", "08:00", "19:00", 100);
         System.out.println("Overtime Hours: " + ot.getOvertimeHours());
         System.out.println("Pay while Pending: " + ot.computeOvertimePay());
