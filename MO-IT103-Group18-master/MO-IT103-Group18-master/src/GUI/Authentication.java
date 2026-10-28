@@ -20,7 +20,7 @@ public class Authentication {
     public static boolean authenticateUser(String employeeID, String lastName) {
         //Try
         //We make a new csv file for the credentials of employees (Feature 4)
-        String loginCSV = "MO-IT103-Group18-master/src/payroll/hub/databases/MotorPH Employee Data - Employee Details.csv"; 
+        String loginCSV = Backend.PayrollDataLoader.EMPLOYEE_DETAILS_CSV;
 
         try (BufferedReader br = new BufferedReader(new FileReader(loginCSV))) {
             String line;

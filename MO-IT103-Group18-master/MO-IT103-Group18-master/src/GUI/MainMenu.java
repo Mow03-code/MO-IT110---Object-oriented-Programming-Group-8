@@ -8,6 +8,9 @@ package GUI;
  *
  * @author Nichie
  */
+import Backend.AttendanceRecord;
+import Backend.Employee;
+import Backend.PayrollDataLoader;
 import Console.TACP2;
 import static GUI.ViewEmployee.ATTENDANCE_RECORD_CSV;
 import javax.swing.*;
@@ -25,7 +28,7 @@ import java.util.List;
 
 public class MainMenu extends JFrame {
     private static String selectedEmployeeID = ""; // Stores selected Employee ID
-    private static final String EMPLOYEE_CSV = "MO-IT103-Group18-master/src/payroll/hub/databases/MotorPH Employee Data - Employee Details.csv"; // Path to employee details CSV
+    private static final String EMPLOYEE_CSV = PayrollDataLoader.EMPLOYEE_DETAILS_CSV; // Path is now defined in one place (PayrollDataLoader)
 
     //Here it will just launch the login screen.
     public static void main(String[] args) {
@@ -75,20 +78,7 @@ public class MainMenu extends JFrame {
 
     //This method is used to get the Id of the Employee for the drop down menu
     private String[] getEmployeeIDs() {
-        List<String> ids = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(EMPLOYEE_CSV))) {
-            br.readLine(); //Skiping the header
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] details = parseCSVLine(line);
-                if (details.length > 0) {
-                    ids.add(details[0]); //Employee ID is first column
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return ids.toArray(String[]::new);
+        return PayrollDataLoader.loadEmployeeIds().toArray(String[]::new);
     }
 
     public static String[] parseCSVLine(String line) {
@@ -122,7 +112,7 @@ public class MainMenu extends JFrame {
     
     // This will read attendance CSV file and get the records of the current user.
     private static String getDailyAttendance(String employeeID) {
-        String csvFile = "MO-IT103-Group18-master/src/payroll/hub/databases/Copy of MotorPH Employee Data - Attendance Record.csv";
+        String csvFile = ATTENDANCE_RECORD_CSV;
         String line;
         StringBuilder attendanceDetails = new StringBuilder();
         
@@ -146,12 +136,10 @@ public class MainMenu extends JFrame {
 
     
     //It calculates the weekly hours wroked of the user from the Attendance csv file.
+    // OOP: hours now come from AttendanceRecord.calculateHoursWorked(); the GUI only groups them by week.
     private static String getWeeklyHoursWorked(String employeeID) {
-        String csvFile = "MO-IT103-Group18-master/src/payroll/hub/databases/Copy of MotorPH Employee Data - Attendance Record.csv";
-        String line;
-        
-        //We define here the format of date and time.
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+<<<<<<< HEAD
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
         Map<Integer, Double> weeklyHoursMap = new LinkedHashMap<>();
@@ -165,17 +153,14 @@ public class MainMenu extends JFrame {
                 if (record.length >= 6 && record[0].equals(employeeID)) {
                     LocalDate date = LocalDate.parse(record[3], dateFormatter);
                     int weekNumber = (date.getDayOfYear() - 1) / 7 + 1; // This determine which week number it is in a year.
+=======
+        Map<Integer, Double> weeklyHoursMap = new LinkedHashMap<>();
+>>>>>>> abf78709988fc86a229a5272e8044d9d6695f5fd
 
-                    LocalTime loginTime = LocalTime.parse(record[4], timeFormatter);
-                    LocalTime logoutTime = LocalTime.parse(record[5], timeFormatter);
-                    
-                    //It calculates the difference in hours between the log in and log out. 
-                    double dailyHours = ChronoUnit.MINUTES.between(loginTime, logoutTime) / 60.0;
-                    //It gathers the accumulated hours work per week.
-                    weeklyHoursMap.put(weekNumber, weeklyHoursMap.getOrDefault(weekNumber, 0.0) + dailyHours);
-                }
-            }
-        } catch (IOException | RuntimeException e) {
+        for (AttendanceRecord record : PayrollDataLoader.loadAttendance(employeeID)) {
+            LocalDate date = LocalDate.parse(record.getDate(), dateFormatter);
+            int weekNumber = (date.getDayOfYear() - 1) / 7 + 1; // This determine which week number it is in a year.
+            weeklyHoursMap.merge(weekNumber, record.calculateHoursWorked(), Double::sum);
         }
         
         //This make the summary of weekly hours.
@@ -191,22 +176,9 @@ public class MainMenu extends JFrame {
     //Here, it retrieves attendance history of the selected employee
     private static List<String> getAttendanceHistory(String employeeID) {
         List<String> records = new ArrayList<>();
-        String line;
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-
-        try (BufferedReader br = new BufferedReader(new FileReader(ATTENDANCE_RECORD_CSV))) {
-            while ((line = br.readLine()) != null) { //Reads ecah line in the csv file until no lines are left
-                String[] record = parseCSVLine(line);
-                if (record.length >= 6 && record[0].equals(employeeID)) {
-                    //We converted the login and logout time strings into localtime object using our predefined format
-                    LocalTime loginTime = LocalTime.parse(record[4], timeFormatter);
-                    LocalTime logoutTime = LocalTime.parse(record[5], timeFormatter);
-                    double hoursWorked = (logoutTime.toSecondOfDay() - loginTime.toSecondOfDay()) / 3600.0;
-                    records.add("Date: " + record[3] + " | Hours Worked: " + String.format("%.2f", hoursWorked));
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (AttendanceRecord record : PayrollDataLoader.loadAttendance(employeeID)) {
+            records.add("Date: " + record.getDate() + " | Hours Worked: "
+                    + String.format("%.2f", record.calculateHoursWorked()));
         }
         return records;
     }
@@ -300,90 +272,36 @@ public class MainMenu extends JFrame {
     }
     
     // Compute total monthly hours worked for selected employee
+    // Total monthly hours now come from the backend (AttendanceRecord via PayrollDataLoader)
     private double computeTotalMonthlyHours(String employeeID, String selectedMonth, String selectedYear) {
-        double totalHours = 0.0;
-
-        try (BufferedReader br = new BufferedReader(new FileReader(ATTENDANCE_RECORD_CSV))) {
-            br.readLine(); // Skip header
-            String line;
-
-            while ((line = br.readLine()) != null) {
-                String[] record = parseCSVLine(line);
-                if (record.length >= 6 && record[0].equals(employeeID)) {
-                    try {
-                        LocalDate recordDate = LocalDate.parse(record[3], DateTimeFormatter.ofPattern("MM-dd-yyyy"));
-
-                        Month selectedMonthEnum = Month.valueOf(selectedMonth.toUpperCase());
-                        int selectedYearInt = Integer.parseInt(selectedYear);
-
-                        if (recordDate.getMonth() == selectedMonthEnum && recordDate.getYear() == selectedYearInt) {
-                            LocalTime loginTime = LocalTime.parse(record[4]);
-                            LocalTime logoutTime = LocalTime.parse(record[5]);
-
-                            double hoursWorked = java.time.Duration.between(loginTime, logoutTime).toMinutes() / 60.0;
-                            totalHours += Math.max(hoursWorked, 0);
-                        }
-                    } catch (NumberFormatException ex) {
-                        System.err.println("Skipping malformed record: " + Arrays.toString(record));
-                    }
-                }
-            }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Error reading attendance data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-
-        return totalHours;
+        Month month = Month.valueOf(selectedMonth.toUpperCase());
+        int year = Integer.parseInt(selectedYear);
+        return PayrollDataLoader.getTotalHoursWorked(employeeID, month, year);
     }
-    
+
     //This will show the computed salary in a message dialog.
-    //We add a sample matrix of the salary tier.
-    private void showSalary(double totalHours) { 
+    //(The sample salary matrix from CP2 was removed: it showed hardcoded, unrelated figures.)
+    private void showSalary(double totalHours) {
         String salaryInfo = computeSalary(selectedEmployeeID, totalHours);
-        int[][] salaryMatrix = {
-            {35000, 5000, 30000},
-            {42000, 6000, 36000},
-            {50000, 7500, 42500}
-        };
-
-        StringBuilder salaryDetails = new StringBuilder();
-        salaryDetails.append(salaryInfo).append("\n\nSample Salary Matrix:\n");
-    
-    for (int i = 0; i < salaryMatrix.length; i++) {
-        salaryDetails.append("Tier ").append(i + 1).append(": Base = ").append(salaryMatrix[i][0])
-                     .append(", Tax = ").append(salaryMatrix[i][1])
-                     .append(", Net Pay = ").append(salaryMatrix[i][2]).append("\n");
+        JOptionPane.showMessageDialog(this, salaryInfo + "\nHours Worked: " + String.format("%.2f", totalHours),
+                "Salary Details", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    JOptionPane.showMessageDialog(this, salaryDetails.toString(), "Salary Details", JOptionPane.INFORMATION_MESSAGE);
-}
 
-
-    // Compute salary based on total hours worked
+    // Gross salary now comes from Employee.calculateSalary() instead of GUI-side math
     public static String computeSalary(String employeeID, double totalHours) {
-        String line;
-        double hourlyRate = 0;
-        String employeeName = "";
-        String employeeIDFound = "";
-
-        try (BufferedReader br = new BufferedReader(new FileReader(EMPLOYEE_CSV))) {
-            while ((line = br.readLine()) != null) {
-                String[] record = parseCSVLine(line);
-                if (record.length >= 19 && record[0].equals(employeeID)) {
-                    employeeName = record[2] + " " + record[1];
-                    employeeIDFound = record[0];
-                    hourlyRate = Double.parseDouble(record[18]);
-                    break;
-                }
-            }
-        } catch (IOException | NumberFormatException e) {
-            e.printStackTrace();
+        Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+        if (employee == null) {
+            return "Employee Name: \nEmployee ID: " + employeeID + "\nGross Salary: 0.00";
         }
-
-        double grossSalary = totalHours * hourlyRate;
-        return "Employee Name: " + employeeName + "\nEmployee ID: " + employeeIDFound + "\nGross Salary: " + String.format("%.2f", grossSalary);
+        double grossSalary = employee.calculateSalary(totalHours);
+        return "Employee Name: " + employee.getName() + "\nEmployee ID: " + employee.getEmployeeId()
+                + "\nGross Salary: " + String.format("%.2f", grossSalary);
     }
 
     // Show deductions for selected employee
+    // TODO (Phase C): replace the TACP2 calls below with PayrollProcessor.processPayroll(...)
+    // once PayrollProcessor is finished, so no payroll computation remains in the GUI.
     private void showDeductions(String employeeID, double totalHours) {
         String salaryInfo = computeSalary(employeeID, totalHours);
         String[] salaryDetails = salaryInfo.split("\n");
@@ -410,6 +328,8 @@ public class MainMenu extends JFrame {
     }
     
     // Display generated payslip for selected employee
+    // TODO (Phase C): replace the TACP2 deduction calls with PayrollProcessor.processPayroll(...)
+    // and display the returned read-only Payslip.
     public static String showPayslip(String employeeID, double totalHours) {
         NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
         currencyFormat.setMinimumFractionDigits(2);
@@ -432,47 +352,17 @@ public class MainMenu extends JFrame {
             pagIbigDeduction = TACP2.computePagIbig(grossSalary);
             withholdingTax = TACP2.computeWithholdingTax(grossSalary);
             totalDeductions = sssDeduction + philHealthDeduction + pagIbigDeduction + withholdingTax;
-
-            //Load CSV allowances
-            String csvFile = "MO-IT103-Group18-master/src/payroll/hub/databases/MotorPH Employee Data - Employee Details.csv";
-            try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    String[] record = parseCSVLine(line);
-                    if (record.length >= 19 && record[0].equals(employeeID)) {
-                        riceSubsidy = parseQuotedNumber(record[14]);
-                        phoneAllowance = parseQuotedNumber(record[15]);
-                        clothingAllowance = parseQuotedNumber(record[16]);
-                        break;
-                    }
-                }
-            } catch (IOException | NumberFormatException e) {
-                e.printStackTrace();
-            }
-
-            totalCompensation = riceSubsidy + phoneAllowance + clothingAllowance;
             netSalary = grossSalary - totalDeductions;
         }
-        // Retrieve allowances from CSV file
-        String csvFile = "MO-IT103-Group18-master/src/payroll/hub/databases/MotorPH Employee Data - Employee Details.csv";
-        
-        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] record = parseCSVLine(line);
-                if (record.length >= 19 && record[0].equals(employeeID)) {  
-                    riceSubsidy = parseQuotedNumber(record[14]);
-                    phoneAllowance = parseQuotedNumber(record[15]);
-                    clothingAllowance = parseQuotedNumber(record[16]);
-                    break;
-                }
-            }
-        } catch (IOException | NumberFormatException e) {
-            e.printStackTrace();
-        }
 
-        
-        
+        // Allowances come from the Employee object (previously read from the CSV twice here)
+        Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+        if (employee != null) {
+            riceSubsidy = employee.getRiceSubsidy();
+            phoneAllowance = employee.getPhoneAllowance();
+            clothingAllowance = employee.getClothingAllowance();
+            totalCompensation = employee.getAllowances();
+        }
 
         // Format payslip details
         String payslipInfo = """
