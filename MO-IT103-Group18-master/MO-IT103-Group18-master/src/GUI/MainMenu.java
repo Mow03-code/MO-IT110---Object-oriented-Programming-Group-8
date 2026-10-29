@@ -1,16 +1,14 @@
+<<<<<<< HEAD
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package GUI;
 
-/**
- *
- * @author Nichie
- */
 import Backend.AttendanceRecord;
 import Backend.Employee;
 import Backend.PayrollDataLoader;
+import Backend.RegularPayrollProcessor;
 import Console.TACP2;
 import static GUI.ViewEmployee.ATTENDANCE_RECORD_CSV;
 import javax.swing.*;
@@ -135,7 +133,7 @@ public class MainMenu extends JFrame {
     }
 
     
-    //It calculates the weekly hours wroked of the user from the Attendance csv file.
+    //It calculates the weekly hours worked of the user from the Attendance csv file.
     // OOP: hours now come from AttendanceRecord.calculateHoursWorked(); the GUI only groups them by week.
     private static String getWeeklyHoursWorked(String employeeID) {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
@@ -213,7 +211,7 @@ public class MainMenu extends JFrame {
             case 2 -> showAttendanceHistory();
         }
     }
-        //This will display the daily attendance of the user. We also amake it scrollable. 
+        //This will display the daily attendance of the user. We also make it scrollable. 
     private void showDailyAttendance() {
         String attendanceInfo = getDailyAttendance(selectedEmployeeID);
 
@@ -244,8 +242,6 @@ public class MainMenu extends JFrame {
         //It displays the weekly hours worked in a message dialog
         JOptionPane.showMessageDialog(this, scrollPane, "Weekly Hours Worked", JOptionPane.INFORMATION_MESSAGE);
     }
-
-
 
     // Displays attendance history for the selected employee
     public void showAttendanceHistory() {
@@ -287,50 +283,67 @@ public class MainMenu extends JFrame {
                 "Salary Details", JOptionPane.INFORMATION_MESSAGE);
     }
 
-
     // Gross salary now comes from Employee.calculateSalary() instead of GUI-side math
+    // Calculates gross salary using Employee.calculateSalary() with thousand separators
     public static String computeSalary(String employeeID, double totalHours) {
         Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
+        currencyFormat.setMinimumFr actionDigits(2);
+        currencyFormat.setMaximumFractionDigits(2);
+
         if (employee == null) {
             return "Employee Name: \nEmployee ID: " + employeeID + "\nGross Salary: 0.00";
         }
         double grossSalary = employee.calculateSalary(totalHours);
-        return "Employee Name: " + employee.getName() + "\nEmployee ID: " + employee.getEmployeeId()
-                + "\nGross Salary: " + String.format("%.2f", grossSalary);
+        return "Employee Name: " + employee.getName() + 
+               "\nEmployee ID: " + employee.getEmployeeId() + 
+               "\nGross Salary: ₱" + currencyFormat.format(grossSalary);
     }
 
-    // Show deductions for selected employee
-    // TODO (Phase C): replace the TACP2 calls below with PayrollProcessor.processPayroll(...)
-    // once PayrollProcessor is finished, so no payroll computation remains in the GUI.
-    private void showDeductions(String employeeID, double totalHours) {
-        String salaryInfo = computeSalary(employeeID, totalHours);
-        String[] salaryDetails = salaryInfo.split("\n");
-        double grossSalary = Double.parseDouble(salaryDetails[2].replaceAll("Gross Salary: ", "").trim());
+    // Displays salary deductions dynamically using OOP RegularPayrollProcessor based on user's selected period
+    private void showDeductions(String employeeID, double totalHours, String selectedMonth, String selectedYear) {
+        Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+        if (employee == null) {
+            JOptionPane.showMessageDialog(this, "Employee not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-        List<Double> deductionsList = new ArrayList<>();
-        deductionsList.add(TACP2.computeSSS(grossSalary));
-        deductionsList.add(TACP2.computePhilHealth(grossSalary));
-        deductionsList.add(TACP2.computePagIbig(grossSalary));
-        deductionsList.add(TACP2.computeWithholdingTax(grossSalary));
+        // Setup currency formatter for thousand separators
+        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
+        currencyFormat.setMinimumFractionDigits(2);
+        currencyFormat.setMaximumFractionDigits(2);
 
-        double totalDeductions = deductionsList.stream().mapToDouble(Double::doubleValue).sum();
-        double netPay = grossSalary - totalDeductions;
+        // Convert selected string month and year to proper types for the processor
+        Month month = Month.valueOf(selectedMonth.toUpperCase());
+        int year = Integer.parseInt(selectedYear);
 
-        String deductionsInfo = "Gross Salary: " + String.format("%.2f", grossSalary) +
-                                "\nSSS Deduction: " + String.format("%.2f", deductionsList.get(0)) +
-                                "\nPhilHealth Deduction: " + String.format("%.2f", deductionsList.get(1)) +
-                                "\nPag-IBIG Deduction: " + String.format("%.2f", deductionsList.get(2)) +
-                                "\nWithholding Tax: " + String.format("%.2f", deductionsList.get(3)) +
-                                "\nTotal Deductions: " + String.format("%.2f", totalDeductions) +
-                                "\nNet Pay: " + String.format("%.2f", netPay);
+        // Instantiate RegularPayrollProcessor using the selected period
+        RegularPayrollProcessor processor = new RegularPayrollProcessor(employee, month, year);
+        processor.processPayroll();
 
-        JOptionPane.showMessageDialog(null, deductionsInfo, "Salary Deductions Breakdown", JOptionPane.INFORMATION_MESSAGE);
+        // Retrieve computed values from backend getters
+        double grossSalary = processor.getGrossPay();
+        double sssDeduction = processor.getSssDeduction();
+        double philHealthDeduction = processor.getPhilHealthDeduction();
+        double pagIbigDeduction = processor.getPagIbigDeduction();
+        double withholdingTax = processor.getWithholdingTax();
+        double totalDeductions = sssDeduction + philHealthDeduction + pagIbigDeduction + withholdingTax;
+        double netPay = processor.getNetPay();
+
+        // Format the final breakdown with currency format for the UI dialog
+        String deductionsInfo = "Gross Salary: ₱" + currencyFormat.format(grossSalary) +
+                                "\nSSS Deduction: ₱" + currencyFormat.format(sssDeduction) +
+                                "\nPhilHealth Deduction: ₱" + currencyFormat.format(philHealthDeduction) +
+                                "\nPag-IBIG Deduction: ₱" + currencyFormat.format(pagIbigDeduction) +
+                                "\nWithholding Tax: ₱" + currencyFormat.format(withholdingTax) +
+                                "\nTotal Deductions: ₱" + currencyFormat.format(totalDeductions) +
+                                "\nNet Pay: ₱" + currencyFormat.format(netPay);
+
+        JOptionPane.showMessageDialog(this, deductionsInfo, "Salary Deductions Breakdown", JOptionPane.INFORMATION_MESSAGE);
     }
     
-    // Display generated payslip for selected employee
-    // TODO (Phase C): replace the TACP2 deduction calls with PayrollProcessor.processPayroll(...)
-    // and display the returned read-only Payslip.
-    public static String showPayslip(String employeeID, double totalHours) {
+    // Displays generated payslip dynamically using OOP RegularPayrollProcessor based on user's selected period
+    public static String showPayslip(String employeeID, double totalHours, String selectedMonth, String selectedYear) {
         NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
         currencyFormat.setMinimumFractionDigits(2);
         currencyFormat.setMaximumFractionDigits(2);
@@ -340,23 +353,27 @@ public class MainMenu extends JFrame {
         double riceSubsidy = 0, phoneAllowance = 0, clothingAllowance = 0;
         double totalCompensation = 0, netSalary = 0;
         
-        //Makes the compesnsation zero if no records is found or if total hours is zero.
-        if (totalHours > 0) {
-            String salaryInfo = computeSalary(employeeID, totalHours);
-            String[] salaryDetails = salaryInfo.split("\n");
-            grossSalary = Double.parseDouble(salaryDetails[2].replaceAll("Gross Salary: ", "").trim());
-            
-            //Compute deductions using TACP2 methods
-            sssDeduction = TACP2.computeSSS(grossSalary);
-            philHealthDeduction = TACP2.computePhilHealth(grossSalary);
-            pagIbigDeduction = TACP2.computePagIbig(grossSalary);
-            withholdingTax = TACP2.computeWithholdingTax(grossSalary);
+        // Load the employee object once for both payroll and allowances
+        Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+
+        // Compute compensation and deductions dynamically if hours exist and employee is found
+        if (totalHours > 0 && employee != null) {
+            Month month = Month.valueOf(selectedMonth.toUpperCase());
+            int year = Integer.parseInt(selectedYear);
+
+            RegularPayrollProcessor processor = new RegularPayrollProcessor(employee, month, year);
+            processor.processPayroll();
+
+            grossSalary = processor.getGrossPay();
+            sssDeduction = processor.getSssDeduction();
+            philHealthDeduction = processor.getPhilHealthDeduction();
+            pagIbigDeduction = processor.getPagIbigDeduction();
+            withholdingTax = processor.getWithholdingTax();
             totalDeductions = sssDeduction + philHealthDeduction + pagIbigDeduction + withholdingTax;
-            netSalary = grossSalary - totalDeductions;
+            netSalary = processor.getNetPay();
         }
 
-        // Allowances come from the Employee object (previously read from the CSV twice here)
-        Employee employee = PayrollDataLoader.loadEmployee(employeeID);
+        // Retrieve allowances directly from the Employee object
         if (employee != null) {
             riceSubsidy = employee.getRiceSubsidy();
             phoneAllowance = employee.getPhoneAllowance();
@@ -385,22 +402,6 @@ public class MainMenu extends JFrame {
 
         JOptionPane.showMessageDialog(null, payslipInfo, "Generated Payslip", JOptionPane.INFORMATION_MESSAGE);
         return payslipInfo;
-    }
-    
-    private static double parseQuotedNumber(String value) {
-        if (value == null || value.trim().isEmpty()) return 0;
-
-        value = value.trim();
-
-        // Remove outer quotes only
-        if (value.startsWith("\"") && value.endsWith("\"")) {
-            value = value.substring(1, value.length() - 1);
-        }
-
-        // Remove inner commas (thousand separators)
-        value = value.replace(",", "");
-
-        return Double.parseDouble(value);
     }
 
     // Show payroll menu for the selected employee
@@ -465,8 +466,8 @@ public class MainMenu extends JFrame {
 
         switch (choice) {
             case 0 -> showSalary(totalHours);
-            case 1 -> showDeductions(selectedEmployeeID, totalHours);
-            case 2 -> showPayslip(selectedEmployeeID, totalHours);
+            case 1 -> showDeductions(selectedEmployeeID, totalHours, selectedMonth, selectedYear);
+            case 2 -> showPayslip(selectedEmployeeID, totalHours, selectedMonth, selectedYear);
         }
     }
     

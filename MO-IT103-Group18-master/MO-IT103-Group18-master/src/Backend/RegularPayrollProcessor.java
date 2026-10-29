@@ -1,31 +1,43 @@
 package Backend;
 
+import java.time.Month;
+
 public class RegularPayrollProcessor extends PayrollProcessor {
 
-    private AttendanceRecord attendanceRecord;
-    private OvertimeRecord overtimeRecord;
+    private final Month month;
+    private final int year;
 
-    public RegularPayrollProcessor(Employee employee, AttendanceRecord attendanceRecord, OvertimeRecord overtimeRecord) {
+    public RegularPayrollProcessor(Employee employee, Month month, int year) {
         super(employee);
-        this.attendanceRecord = attendanceRecord;
-        this.overtimeRecord = overtimeRecord;
+        this.month = month;
+        this.year = year;
     }
 
     @Override
     protected double computePay() {
-        double hoursWorked = attendanceRecord.calculateHoursWorked();
-        double basicPay = hoursWorked * employee.getHourlyRate();
-        double overtimePay = overtimeRecord.computeOvertimePay();
-        return basicPay + overtimePay + employee.getAllowances();
+        // Total hours worked this month, break already deducted
+        // (no overtime premium applied here — overtime only gets
+        // added once we have an actual approved OvertimeRecord for
+        // this employee/month, which we don't yet have a data source for)
+        double totalHours = PayrollDataLoader.getTotalHoursWorked(
+                employee.getEmployeeId(), month, year);
+
+        // NOTE: allowances are excluded on purpose — they go on the
+        // payslip separately, not into taxable gross pay
+        return employee.calculateSalary(totalHours);
     }
 
     public static void main(String[] args) {
-        Employee emp = new Employee("10001", "Garcia", "Manuel III", "Chief Executive Officer", "Regular", 90000, 535.71, 1500, 2000, 1000);
-        AttendanceRecord attendance = new AttendanceRecord("10001", "06-03-2024", "08:59", "18:31");
-        RegularOvertime overtime = new RegularOvertime("10001", "06-03-2024", "08:59", "18:31", 535.71);
-        overtime.setApprovalStatus("Approved");
+        Employee emp = PayrollDataLoader.loadEmployee("10001");
+        RegularPayrollProcessor processor = new RegularPayrollProcessor(emp, Month.JUNE, 2024);
 
-        RegularPayrollProcessor processor = new RegularPayrollProcessor(emp, attendance, overtime);
-        System.out.println("Computed Pay: " + processor.computePay());
+        processor.processPayroll();
+
+        System.out.println("Gross Pay: " + processor.getGrossPay());
+        System.out.println("SSS: " + processor.getSssDeduction());
+        System.out.println("PhilHealth: " + processor.getPhilHealthDeduction());
+        System.out.println("Pag-IBIG: " + processor.getPagIbigDeduction());
+        System.out.println("Withholding Tax: " + processor.getWithholdingTax());
+        System.out.println("Net Pay: " + processor.getNetPay());
     }
 }
