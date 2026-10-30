@@ -16,7 +16,7 @@ import javax.swing.table.DefaultTableModel;
 
 /**
  *
- * @author USER
+ * @author MO-IT110 Group 8
  */
 public class UpdateEmployee {
     //This method updates an employee records in the csv file while preserving the ID for look up

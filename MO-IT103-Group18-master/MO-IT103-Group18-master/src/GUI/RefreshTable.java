@@ -14,7 +14,7 @@ import javax.swing.table.DefaultTableModel;
 
 /**
  *
- * @author USER
+ * @author MO-IT110 Group 8
  */
 public class RefreshTable {
     //This method updates a specific employee data in the Jtable after the updates or any modifications

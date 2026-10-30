@@ -10,7 +10,7 @@ import java.io.IOException;
 
 /**
  *
- * @author USER
+ * @author MO-IT110 Group 8
  */
 public class GetEmployeeDetails {
     

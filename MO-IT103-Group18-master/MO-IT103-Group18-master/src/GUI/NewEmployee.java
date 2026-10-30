@@ -31,7 +31,7 @@ import javax.swing.JComboBox;
 
 /**
  *
- * @author USER
+ * @author MO-IT110 Group 8
  */
 public class NewEmployee {
     

@@ -6,7 +6,7 @@ package GUI;
 
 /**
  *
- * @author Nichie
+ * @author MO-IT110 Group 8
  */
 
 import java.awt.BorderLayout;

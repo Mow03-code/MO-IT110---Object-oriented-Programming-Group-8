@@ -16,7 +16,7 @@ import javax.swing.SwingUtilities;
 
 /**
  *
- * @author USER
+ * @author MO-IT110 Group 8
  */
 public class LogIn {
     //it will now display the login screen and ask for authentication.
