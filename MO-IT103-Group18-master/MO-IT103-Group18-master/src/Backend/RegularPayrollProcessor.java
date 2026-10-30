@@ -22,22 +22,17 @@ public class RegularPayrollProcessor extends PayrollProcessor {
         double totalHours = PayrollDataLoader.getTotalHoursWorked(
                 employee.getEmployeeId(), month, year);
 
-        // NOTE: allowances are excluded on purpose — they go on the
+        //  allowances are excluded on purpose — they go on the
         // payslip separately, not into taxable gross pay
         return employee.calculateSalary(totalHours);
     }
 
     public static void main(String[] args) {
-        Employee emp = PayrollDataLoader.loadEmployee("10001");
-        RegularPayrollProcessor processor = new RegularPayrollProcessor(emp, Month.JUNE, 2024);
+    Employee emp = PayrollDataLoader.loadEmployee("10001");
+    RegularPayrollProcessor processor = new RegularPayrollProcessor(emp, Month.JUNE, 2024);
 
-        processor.processPayroll();
+    Payslip payslip = processor.processPayroll("10001", "June 2024");
+    System.out.println(payslip);
+}
 
-        System.out.println("Gross Pay: " + processor.getGrossPay());
-        System.out.println("SSS: " + processor.getSssDeduction());
-        System.out.println("PhilHealth: " + processor.getPhilHealthDeduction());
-        System.out.println("Pag-IBIG: " + processor.getPagIbigDeduction());
-        System.out.println("Withholding Tax: " + processor.getWithholdingTax());
-        System.out.println("Net Pay: " + processor.getNetPay());
-    }
 }
