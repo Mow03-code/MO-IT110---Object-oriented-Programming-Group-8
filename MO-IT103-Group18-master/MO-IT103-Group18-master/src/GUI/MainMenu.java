@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
@@ -8,8 +7,12 @@ package GUI;
 import Backend.AttendanceRecord;
 import Backend.Employee;
 import Backend.PayrollDataLoader;
+import Backend.FinalPayPayrollProcessor;
+import Backend.PayrollProcessor;
+import Backend.Payslip;
 import Backend.RegularPayrollProcessor;
-import Console.TACP2;
+import Backend.ThirteenthMonthPayrollProcessor;
+import com.github.lgooddatepicker.components.DatePicker;
 import static GUI.ViewEmployee.ATTENDANCE_RECORD_CSV;
 import javax.swing.*;
 import java.awt.*;
@@ -259,133 +262,124 @@ public class MainMenu extends JFrame {
         return PayrollDataLoader.getTotalHoursWorked(employeeID, month, year);
     }
 
-    //This will show the computed salary in a message dialog.
-    //(The sample salary matrix from CP2 was removed: it showed hardcoded, unrelated figures.)
-    private void showSalary(double totalHours) {
-        String salaryInfo = computeSalary(selectedEmployeeID, totalHours);
-        JOptionPane.showMessageDialog(this, salaryInfo + "\nHours Worked: " + String.format("%.2f", totalHours),
-                "Salary Details", JOptionPane.INFORMATION_MESSAGE);
+    // Payroll types the user can choose. Each one creates a different PayrollProcessor subclass.
+    private static final String REGULAR = "Regular";
+    private static final String THIRTEENTH_MONTH = "13th Month";
+    private static final String FINAL_PAY = "Final Pay";
+
+    // Creates the right PayrollProcessor subclass for the chosen payroll type.
+    // The variable type is the parent class, so the GUI never needs to know which
+    // subclass it is: processPayroll() runs the subclass's own computePay() (polymorphism).
+    private static PayrollProcessor createProcessor(String payrollType, Employee employee,
+                                                    Month month, int year, LocalDate separationDate) {
+        switch (payrollType) {
+            case THIRTEENTH_MONTH:
+                return new ThirteenthMonthPayrollProcessor(employee);
+            case FINAL_PAY:
+                return new FinalPayPayrollProcessor(employee, separationDate);
+            default:
+                return new RegularPayrollProcessor(employee, month, year);
+        }
     }
 
-    // Gross salary now comes from Employee.calculateSalary() instead of GUI-side math
-    // Calculates gross salary using Employee.calculateSalary() with thousand separators
+    private static String payPeriodLabel(String payrollType, Month month, int year, LocalDate separationDate) {
+        switch (payrollType) {
+            case THIRTEENTH_MONTH:
+                return "13th Month Pay " + year;
+            case FINAL_PAY:
+                return "Final Pay (separated " + separationDate.format(DateTimeFormatter.ofPattern("MM-dd-yyyy")) + ")";
+            default:
+                return month.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH) + " " + year;
+        }
+    }
+
+    private static NumberFormat currencyFormat() {
+        NumberFormat format = NumberFormat.getNumberInstance(Locale.US);
+        format.setMinimumFractionDigits(2);
+        format.setMaximumFractionDigits(2);
+        return format;
+    }
+
+    // View Salary: gross pay only (plus the breakdown for Final Pay)
+    private void showSalary(Payslip payslip, PayrollProcessor processor, Employee employee) {
+        NumberFormat money = currencyFormat();
+        String breakdown = processor.getGrossPayBreakdown();
+        String info = "Employee Name: " + employee.getName()
+                + "\nEmployee ID: " + employee.getEmployeeId()
+                + "\nPay Period: " + payslip.getPayPeriod()
+                + (breakdown.isEmpty() ? "" : "\n\n" + breakdown + "\n")
+                + "\nGross Pay: ₱" + money.format(payslip.getGrossPay());
+        JOptionPane.showMessageDialog(this, info, "Salary Details", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // Gross salary from Employee.calculateSalary() (kept for screens that only need gross pay)
     public static String computeSalary(String employeeID, double totalHours) {
         Employee employee = PayrollDataLoader.loadEmployee(employeeID);
-        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
-        currencyFormat.setMinimumFr actionDigits(2);
-        currencyFormat.setMaximumFractionDigits(2);
-
         if (employee == null) {
             return "Employee Name: \nEmployee ID: " + employeeID + "\nGross Salary: 0.00";
         }
-        double grossSalary = employee.calculateSalary(totalHours);
-        return "Employee Name: " + employee.getName() + 
-               "\nEmployee ID: " + employee.getEmployeeId() + 
-               "\nGross Salary: ₱" + currencyFormat.format(grossSalary);
+        return "Employee Name: " + employee.getName()
+                + "\nEmployee ID: " + employee.getEmployeeId()
+                + "\nGross Salary: ₱" + currencyFormat().format(employee.calculateSalary(totalHours));
     }
 
-    // Displays salary deductions dynamically using OOP RegularPayrollProcessor based on user's selected period
-    private void showDeductions(String employeeID, double totalHours, String selectedMonth, String selectedYear) {
-        Employee employee = PayrollDataLoader.loadEmployee(employeeID);
-        if (employee == null) {
-            JOptionPane.showMessageDialog(this, "Employee not found!", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    // View Deductions: every value comes from the read-only Payslip returned by the backend
+    private void showDeductions(Payslip payslip) {
+        NumberFormat money = currencyFormat();
+        double totalDeductions = payslip.getSssDeduction() + payslip.getPhilHealthDeduction()
+                + payslip.getPagIbigDeduction() + payslip.getWithholdingTax();
 
-        // Setup currency formatter for thousand separators
-        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
-        currencyFormat.setMinimumFractionDigits(2);
-        currencyFormat.setMaximumFractionDigits(2);
-
-        // Convert selected string month and year to proper types for the processor
-        Month month = Month.valueOf(selectedMonth.toUpperCase());
-        int year = Integer.parseInt(selectedYear);
-
-        // Instantiate RegularPayrollProcessor using the selected period
-        RegularPayrollProcessor processor = new RegularPayrollProcessor(employee, month, year);
-        processor.processPayroll();
-
-        // Retrieve computed values from backend getters
-        double grossSalary = processor.getGrossPay();
-        double sssDeduction = processor.getSssDeduction();
-        double philHealthDeduction = processor.getPhilHealthDeduction();
-        double pagIbigDeduction = processor.getPagIbigDeduction();
-        double withholdingTax = processor.getWithholdingTax();
-        double totalDeductions = sssDeduction + philHealthDeduction + pagIbigDeduction + withholdingTax;
-        double netPay = processor.getNetPay();
-
-        // Format the final breakdown with currency format for the UI dialog
-        String deductionsInfo = "Gross Salary: ₱" + currencyFormat.format(grossSalary) +
-                                "\nSSS Deduction: ₱" + currencyFormat.format(sssDeduction) +
-                                "\nPhilHealth Deduction: ₱" + currencyFormat.format(philHealthDeduction) +
-                                "\nPag-IBIG Deduction: ₱" + currencyFormat.format(pagIbigDeduction) +
-                                "\nWithholding Tax: ₱" + currencyFormat.format(withholdingTax) +
-                                "\nTotal Deductions: ₱" + currencyFormat.format(totalDeductions) +
-                                "\nNet Pay: ₱" + currencyFormat.format(netPay);
+        String deductionsInfo = "Pay Period: " + payslip.getPayPeriod()
+                + "\nGross Pay: ₱" + money.format(payslip.getGrossPay())
+                + "\nSSS Deduction: ₱" + money.format(payslip.getSssDeduction())
+                + "\nPhilHealth Deduction: ₱" + money.format(payslip.getPhilHealthDeduction())
+                + "\nPag-IBIG Deduction: ₱" + money.format(payslip.getPagIbigDeduction())
+                + "\nWithholding Tax: ₱" + money.format(payslip.getWithholdingTax())
+                + "\nTotal Deductions: ₱" + money.format(totalDeductions)
+                + "\nNet Pay: ₱" + money.format(payslip.getNetPay());
 
         JOptionPane.showMessageDialog(this, deductionsInfo, "Salary Deductions Breakdown", JOptionPane.INFORMATION_MESSAGE);
     }
-    
-    // Displays generated payslip dynamically using OOP RegularPayrollProcessor based on user's selected period
-    public static String showPayslip(String employeeID, double totalHours, String selectedMonth, String selectedYear) {
-        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
-        currencyFormat.setMinimumFractionDigits(2);
-        currencyFormat.setMaximumFractionDigits(2);
 
-        double grossSalary = 0, sssDeduction = 0, philHealthDeduction = 0;
-        double pagIbigDeduction = 0, withholdingTax = 0, totalDeductions = 0;
-        double riceSubsidy = 0, phoneAllowance = 0, clothingAllowance = 0;
-        double totalCompensation = 0, netSalary = 0;
-        
-        // Load the employee object once for both payroll and allowances
+    // Builds the payslip text from the read-only Payslip (no computation in the GUI)
+    public static String formatPayslip(Payslip payslip, PayrollProcessor processor) {
+        NumberFormat money = currencyFormat();
+        double totalDeductions = payslip.getSssDeduction() + payslip.getPhilHealthDeduction()
+                + payslip.getPagIbigDeduction() + payslip.getWithholdingTax();
+        double totalAllowances = payslip.getRiceSubsidy() + payslip.getPhoneAllowance() + payslip.getClothingAllowance();
+        String breakdown = processor.getGrossPayBreakdown();
+
+        return "**PAYSLIP**"
+                + "\nEmployee: " + payslip.getEmployeeId()
+                + "\nPay Period: " + payslip.getPayPeriod()
+                + (breakdown.isEmpty() ? "" : "\n\n" + breakdown)
+                + "\n\nGross Pay: ₱" + money.format(payslip.getGrossPay())
+                + "\n\n**Deductions**"
+                + "\nSSS Deduction: ₱" + money.format(payslip.getSssDeduction())
+                + "\nPhilHealth Deduction: ₱" + money.format(payslip.getPhilHealthDeduction())
+                + "\nPag-IBIG Deduction: ₱" + money.format(payslip.getPagIbigDeduction())
+                + "\nWithholding Tax: ₱" + money.format(payslip.getWithholdingTax())
+                + "\nTotal Deductions: ₱" + money.format(totalDeductions)
+                + "\n\n**Net Pay**: ₱" + money.format(payslip.getNetPay())
+                + "\n\n**Allowances (non-taxable)**"
+                + "\nRice Subsidy: ₱" + money.format(payslip.getRiceSubsidy())
+                + "\nPhone Allowance: ₱" + money.format(payslip.getPhoneAllowance())
+                + "\nClothing Allowance: ₱" + money.format(payslip.getClothingAllowance())
+                + "\nTotal Allowances: ₱" + money.format(totalAllowances)
+                + "\n\n**Take-Home Pay**: ₱" + money.format(payslip.getTakeHomePay());
+    }
+
+    // Regular payslip for one month (used by the View Employee screen)
+    public static String showPayslip(String employeeID, String selectedMonth, String selectedYear) {
         Employee employee = PayrollDataLoader.loadEmployee(employeeID);
-
-        // Compute compensation and deductions dynamically if hours exist and employee is found
-        if (totalHours > 0 && employee != null) {
-            Month month = Month.valueOf(selectedMonth.toUpperCase());
-            int year = Integer.parseInt(selectedYear);
-
-            RegularPayrollProcessor processor = new RegularPayrollProcessor(employee, month, year);
-            processor.processPayroll();
-
-            grossSalary = processor.getGrossPay();
-            sssDeduction = processor.getSssDeduction();
-            philHealthDeduction = processor.getPhilHealthDeduction();
-            pagIbigDeduction = processor.getPagIbigDeduction();
-            withholdingTax = processor.getWithholdingTax();
-            totalDeductions = sssDeduction + philHealthDeduction + pagIbigDeduction + withholdingTax;
-            netSalary = processor.getNetPay();
+        if (employee == null) {
+            return "Employee " + employeeID + " not found.";
         }
-
-        // Retrieve allowances directly from the Employee object
-        if (employee != null) {
-            riceSubsidy = employee.getRiceSubsidy();
-            phoneAllowance = employee.getPhoneAllowance();
-            clothingAllowance = employee.getClothingAllowance();
-            totalCompensation = employee.getAllowances();
-        }
-
-        // Format payslip details
-        String payslipInfo = """
-                     **PAYSLIP**
-                     Employee: """ + employeeID +
-                     "\nGross Salary: ₱" + currencyFormat.format(grossSalary) +
-                     "\n\n**Deductions**" +
-                     "\nSSS Deduction: ₱" + currencyFormat.format(sssDeduction) +
-                     "\nPhilHealth Deduction: ₱" + currencyFormat.format(philHealthDeduction) +
-                     "\nPag-IBIG Deduction: ₱" + currencyFormat.format(pagIbigDeduction) +
-                     "\nWithholding Tax: ₱" + currencyFormat.format(withholdingTax) +
-                     "\nTotal Deductions: ₱" + currencyFormat.format(totalDeductions) +
-                     "\n\n**Compensations**" +
-                     "\nRice Subsidy: ₱" + currencyFormat.format(riceSubsidy) +
-                     "\nPhone Allowance: ₱" + currencyFormat.format(phoneAllowance) +
-                     "\nClothing Allowance: ₱" + currencyFormat.format(clothingAllowance) +
-                     "\nTotal Compensation: ₱" + currencyFormat.format(totalCompensation) +
-                     "\n\n**Net Salary**" +
-                     "\nNet Pay: ₱" + currencyFormat.format(netSalary);
-
-        JOptionPane.showMessageDialog(null, payslipInfo, "Generated Payslip", JOptionPane.INFORMATION_MESSAGE);
-        return payslipInfo;
+        Month month = Month.valueOf(selectedMonth.toUpperCase());
+        int year = Integer.parseInt(selectedYear);
+        PayrollProcessor processor = new RegularPayrollProcessor(employee, month, year);
+        Payslip payslip = processor.processPayroll(employeeID, payPeriodLabel(REGULAR, month, year, null));
+        return formatPayslip(payslip, processor);
     }
 
     // Show payroll menu for the selected employee
@@ -407,30 +401,50 @@ public class MainMenu extends JFrame {
             options,
             options[0]
         );
-        
+
         //We want to close the selection if user close the dialog box
         if (choice == JOptionPane.CLOSED_OPTION) {
             return;
         }
 
-        //We added a payroll coverage by month(feature 1)
-        // Dropdowns for payroll selection
+        // Payroll type decides which PayrollProcessor subclass is created
+        JComboBox<String> typeSelector = new JComboBox<>(new String[]{REGULAR, THIRTEENTH_MONTH, FINAL_PAY});
+
         JComboBox<String> monthSelector = new JComboBox<>(new String[]{
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         });
-        
-        //We also include the year in payroll coverage
-        JComboBox<String> yearSelector = new JComboBox<>(new String[]{
-            "2023", "2024", "2025", "2026", "2027"
+
+        // Only years that actually have attendance data
+        String[] years = PayrollDataLoader.getAttendanceYears();
+        if (years.length == 0) {
+            years = new String[]{String.valueOf(java.time.Year.now().getValue())};
+        }
+        JComboBox<String> yearSelector = new JComboBox<>(years);
+        yearSelector.setSelectedItem(years[years.length - 1]);
+
+        // Separation date is only used for Final Pay
+        DatePicker separationPicker = new DatePicker();
+        separationPicker.setDate(LocalDate.of(Integer.parseInt(years[years.length - 1]), 6, 30));
+        separationPicker.setEnabled(false);
+
+        // Enable the fields that matter for the chosen type
+        typeSelector.addActionListener(e -> {
+            String type = (String) typeSelector.getSelectedItem();
+            monthSelector.setEnabled(REGULAR.equals(type));
+            yearSelector.setEnabled(!FINAL_PAY.equals(type));
+            separationPicker.setEnabled(FINAL_PAY.equals(type));
         });
-        
-        //We added the selection pannel
-        JPanel selectionPanel = new JPanel();
-        selectionPanel.add(new JLabel("Select Month:"));
+
+        JPanel selectionPanel = new JPanel(new GridLayout(4, 2, 8, 8));
+        selectionPanel.add(new JLabel("Payroll Type:"));
+        selectionPanel.add(typeSelector);
+        selectionPanel.add(new JLabel("Month (Regular):"));
         selectionPanel.add(monthSelector);
-        selectionPanel.add(new JLabel("Select Year:"));
+        selectionPanel.add(new JLabel("Year (Regular / 13th Month):"));
         selectionPanel.add(yearSelector);
+        selectionPanel.add(new JLabel("Separation Date (Final Pay):"));
+        selectionPanel.add(separationPicker);
 
         int selection = JOptionPane.showConfirmDialog(
             null,
@@ -444,17 +458,41 @@ public class MainMenu extends JFrame {
             return;
         }
 
-        String selectedMonth = (String) monthSelector.getSelectedItem();
-        String selectedYear = (String) yearSelector.getSelectedItem();
-        double totalHours = computeTotalMonthlyHours(selectedEmployeeID, selectedMonth, selectedYear);
+        String payrollType = (String) typeSelector.getSelectedItem();
+        Month month = Month.valueOf(((String) monthSelector.getSelectedItem()).toUpperCase());
+        int year = Integer.parseInt((String) yearSelector.getSelectedItem());
+        LocalDate separationDate = separationPicker.getDate();
+
+        if (FINAL_PAY.equals(payrollType) && separationDate == null) {
+            JOptionPane.showMessageDialog(this, "Please pick a separation date for Final Pay.", "Missing Date", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Employee employee = PayrollDataLoader.loadEmployee(selectedEmployeeID);
+        if (employee == null) {
+            JOptionPane.showMessageDialog(this, "Employee not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (REGULAR.equals(payrollType) && PayrollDataLoader.getTotalHoursWorked(selectedEmployeeID, month, year) == 0) {
+            JOptionPane.showMessageDialog(this, "No attendance records for " + selectedEmployeeID + " in the selected month.",
+                    "No Data", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Parent-typed variable: the correct subclass's computePay() runs automatically
+        PayrollProcessor processor = createProcessor(payrollType, employee, month, year, separationDate);
+        Payslip payslip = processor.processPayroll(selectedEmployeeID,
+                payPeriodLabel(payrollType, month, year, separationDate));
 
         switch (choice) {
-            case 0 -> showSalary(totalHours);
-            case 1 -> showDeductions(selectedEmployeeID, totalHours, selectedMonth, selectedYear);
-            case 2 -> showPayslip(selectedEmployeeID, totalHours, selectedMonth, selectedYear);
+            case 0 -> showSalary(payslip, processor, employee);
+            case 1 -> showDeductions(payslip);
+            case 2 -> JOptionPane.showMessageDialog(this, formatPayslip(payslip, processor),
+                        "Generated Payslip", JOptionPane.INFORMATION_MESSAGE);
         }
     }
-    
+
     // Logs the user out and returns to the login screen
     private void logOut() {
         dispose(); // Close the main window
