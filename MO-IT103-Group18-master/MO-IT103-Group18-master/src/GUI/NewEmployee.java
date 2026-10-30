@@ -4,6 +4,7 @@
  */
 package GUI;
 
+import Backend.Employee;
 import static GUI.ViewEmployee.EMPLOYEE_DETAILS_CSV;
 import java.awt.Color;
 import java.awt.GridBagConstraints;
@@ -33,20 +34,21 @@ import javax.swing.JComboBox;
  * @author USER
  */
 public class NewEmployee {
-    //Now, this will open a form for adding a new employee
+    
+    // Opens a form for adding a new employee
     public static void displayNewEmployeeForm(JFrame parentFrame, DefaultTableModel model) {
         JFrame formFrame = new JFrame("Add New Employee");
         formFrame.setSize(500, 700);
         formFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         formFrame.setLocationRelativeTo(parentFrame);
         
-        //We use the GridBagLayout to organize our input fields
+        // Use GridBagLayout to organize input fields
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        //This is are the labels for the employee input fields
+        // Labels for the employee input fields
         String[] labels = {
             "Employee Number*:", "Last Name*:", "First Name*:", "Birthday*:", "Address*:", "Phone Number*:",
             "SSS Number*:", "PhilHealth Number*:", "TIN Number*:", "Pag-IBIG Number*:", "Status*:",
@@ -60,29 +62,29 @@ public class NewEmployee {
             "Regular", "Probationary"
         });
         
-        //Now it will generate the form fields with labels and we set the textfields to 20.
+        // Generate form fields with labels and set text fields size to 20
         for (int i = 0; i < labels.length; i++) {
             gbc.gridx = 0;
             gbc.gridy = i;
             panel.add(new JLabel(labels[i]), gbc);
             gbc.gridx = 1;
 
-            if (i == 3) { //Birthday field
+            if (i == 3) { // Birthday field
                 birthdayPicker[0] = new DatePicker();
                 birthdayPicker[0].setDateToToday();
                 panel.add(birthdayPicker[0], gbc);
 
             } else if (i == 10) { // Status field
                 panel.add(statusCombo, gbc);
-            }else {
+            } else {
                 textFields[i] = new JTextField(20);
 
                 if (i == 0) {
                     String generatedID = generateNextEmployeeID(EMPLOYEE_DETAILS_CSV);
-                textFields[i].setText(generatedID);
-                textFields[i].setEditable(false);
-                textFields[i].setBackground(Color.LIGHT_GRAY);
-                textFields[i].setToolTipText("Employee ID is generated automatically");
+                    textFields[i].setText(generatedID);
+                    textFields[i].setEditable(false);
+                    textFields[i].setBackground(Color.LIGHT_GRAY);
+                    textFields[i].setToolTipText("Employee ID is generated automatically");
                 } else {
                     final int index = i;
                     textFields[i].getDocument().addDocumentListener(new DocumentListener() {
@@ -104,15 +106,15 @@ public class NewEmployee {
             }
         }
         
-        //This is the submit button to add the employee to the record
+        // Submit button to add the employee to the record
         JButton submitButton = ButtonsStyle.ButtonStyle2("Submit");
-            gbc.gridx = 0;
-            gbc.gridy = labels.length;
-            gbc.gridwidth = 2;
-            panel.add(submitButton, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = labels.length;
+        gbc.gridwidth = 2;
+        panel.add(submitButton, gbc);
 
-            //This is the action listener when adding a new emplpoyee data to the csv file and in the table
-            submitButton.addActionListener(e -> {
+        // Action listener for adding a new employee data to the CSV file and the table
+        submitButton.addActionListener(e -> {
             String[] newEmployee = new String[labels.length];
 
             for (int i = 0; i < labels.length; i++) {
@@ -147,6 +149,32 @@ public class NewEmployee {
                 }
             }
 
+            // --- OOP REFACTORING: Validate core fields through Employee object instantiation ---
+            try {
+                String empId = newEmployee[0];
+                String lastName = newEmployee[1];
+                String firstName = newEmployee[2];
+                String status = newEmployee[10];
+                String position = newEmployee[11];
+                
+                double basicSalary = Double.parseDouble(newEmployee[13].replace(",", ""));
+                double hourlyRate = Double.parseDouble(newEmployee[18].replace(",", ""));
+                double rice = Double.parseDouble(newEmployee[14].replace(",", ""));
+                double phone = Double.parseDouble(newEmployee[15].replace(",", ""));
+                double clothing = Double.parseDouble(newEmployee[16].replace(",", ""));
+
+                // Instantiating Employee enforces backend validation rules (e.g., basic salary > 0, hourly rate > 0)[cite: 5]
+                Employee validatedEmployee = new Employee(empId, lastName, firstName, position, status, basicSalary, hourlyRate, rice, phone, clothing);
+                
+                // Keep formatted values consistent with object state
+                newEmployee[13] = String.valueOf(validatedEmployee.getBasicSalary());
+                newEmployee[18] = String.valueOf(validatedEmployee.getHourlyRate());
+
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(formFrame, "OOP Validation Error: " + ex.getMessage(), "Invalid Data", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             System.out.println("Appending Employee Data: " + String.join(",", newEmployee));
             appendNewEmployeeToCSV(newEmployee);
             model.addRow(new Object[]{newEmployee[0], newEmployee[1], newEmployee[2], newEmployee[6], newEmployee[7], newEmployee[8], newEmployee[9]});
@@ -157,21 +185,21 @@ public class NewEmployee {
         formFrame.setVisible(true);
     }
 
-
-
-//This method saves the new employee data into the csv file
+    // Saves the new employee data into the CSV file
     private static void appendNewEmployeeToCSV(String[] employeeData) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(EMPLOYEE_DETAILS_CSV, true))) {
-            bw.write(String.join(",", employeeData)); //Append the new employee record
+            bw.write(String.join(",", employeeData)); // Append the new employee record
             bw.newLine();
-            bw.flush(); //We want to make sure that the data is written in the csv file before closing
+            bw.flush(); // Ensure data is written before closing
             JOptionPane.showMessageDialog(null, "Employee added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "Error saving new employee!", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    // Generates the next unique employee ID to prevent duplicates
     private static String generateNextEmployeeID(String csvPath) {
-        int maxID = 0;
+        int maxID = 10000;
 
         try (BufferedReader br = new BufferedReader(new FileReader(csvPath))) {
             br.readLine(); // Skip header
@@ -196,16 +224,15 @@ public class NewEmployee {
         return String.valueOf(maxID + 1);
     }
     
- 
-   private static String removeQuotes(String input) {
-        input = input.replaceAll("^\"|\"$", ""); //it removes redundant quotes
+    private static String removeQuotes(String input) {
+        if (input == null) return "";
+        input = input.replaceAll("^\"|\"$", ""); // Removes redundant quotes
 
-        //This will check if the user's input has a comma then put it inside quotation
+        // Checks if input has a comma and encloses it in quotes properly
         if (input.contains(",") || input.contains("\"") || input.contains("'")) {
             input = "\"" + input.replace("\"", "\"\"") + "\"";
         }
 
-        return input.trim(); //This trims the spaces
+        return input.trim(); // Trims spaces
     }
-
 }
