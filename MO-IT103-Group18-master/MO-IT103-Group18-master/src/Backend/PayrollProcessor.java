@@ -21,6 +21,25 @@ public abstract class PayrollProcessor {
         return true;
     }
 
+    // Amount that SSS, PhilHealth and Pag-IBIG are computed on.
+    // Default: the whole gross pay. FinalPayPayrollProcessor overrides it so
+    // contributions apply only to the last salary, not to 13th month or leave conversion.
+    protected double getContributionBase(double grossPay) {
+        return grossPay;
+    }
+
+    // Income that withholding tax is computed on (taxable income).
+    // Default: gross pay minus the three statutory contributions (group decision, Oct 27).
+    protected double getTaxableIncome(double grossPay, double contributions) {
+        return grossPay - contributions;
+    }
+
+    // Optional extra lines that explain how gross pay was built (shown on the payslip).
+    // Default: none. FinalPayPayrollProcessor overrides it to list its components.
+    public String getGrossPayBreakdown() {
+        return "";
+    }
+
     private double calculateNetPay(double grossPay, double deductions) {
         netPay = grossPay - deductions;
         return netPay;
@@ -37,10 +56,11 @@ public abstract class PayrollProcessor {
         double tax = 0;
 
         if (appliesStatutoryDeductions()) {
-            sss = new SSSDeduction().computeDeduction(gross);
-            philHealth = new PhilHealthDeduction().computeDeduction(gross);
-            pagIbig = new PagIbigDeduction().computeDeduction(gross);
-            double taxable = gross - sss - philHealth - pagIbig;
+            double contributionBase = getContributionBase(gross);
+            sss = new SSSDeduction().computeDeduction(contributionBase);
+            philHealth = new PhilHealthDeduction().computeDeduction(contributionBase);
+            pagIbig = new PagIbigDeduction().computeDeduction(contributionBase);
+            double taxable = getTaxableIncome(gross, sss + philHealth + pagIbig);
             tax = new WithholdingTaxDeduction().computeDeduction(taxable);
         }
 
