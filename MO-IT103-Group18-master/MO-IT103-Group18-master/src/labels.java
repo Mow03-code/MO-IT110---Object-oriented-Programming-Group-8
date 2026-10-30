@@ -5,7 +5,7 @@
 
 /**
  *
- * @author Mow
+ * @author MO-IT110 Group 8
  */
 class labels {
     
