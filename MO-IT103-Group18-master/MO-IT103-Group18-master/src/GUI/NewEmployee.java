@@ -163,7 +163,7 @@ public class NewEmployee {
                 double phone = Double.parseDouble(newEmployee[15].replace(",", ""));
                 double clothing = Double.parseDouble(newEmployee[16].replace(",", ""));
 
-                // Instantiating Employee enforces backend validation rules (e.g., basic salary > 0, hourly rate > 0)[cite: 5]
+                // Instantiating Employee enforces backend validation rules (e.g., basic salary > 0, hourly rate > 0)
                 Employee validatedEmployee = new Employee(empId, lastName, firstName, position, status, basicSalary, hourlyRate, rice, phone, clothing);
                 
                 // Keep formatted values consistent with object state
