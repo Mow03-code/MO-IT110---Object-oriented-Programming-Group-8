@@ -8,6 +8,7 @@ import Backend.AttendanceRecord;
 import Backend.Employee;
 import Backend.PayrollDataLoader;
 import Backend.FinalPayPayrollProcessor;
+import Backend.LeaveRecord;
 import Backend.PayrollProcessor;
 import Backend.Payslip;
 import Backend.RegularPayrollProcessor;
@@ -193,7 +194,7 @@ public class MainMenu extends JFrame {
     
     //This will display the options of attendance menu
     public void showAttendance() {
-        String[] options = {"View Daily Attendance Record", "Calculate Hours Worked Per Week","View Attendance History"};
+        String[] options = {"View Daily Attendance Record", "Calculate Hours Worked Per Week","View Attendance History", "View Leave Records"};
         int choice = JOptionPane.showOptionDialog(
             this, 
             "Select an option:", 
@@ -209,7 +210,59 @@ public class MainMenu extends JFrame {
             case 0 -> showDailyAttendance();
             case 1 -> showWeeklyHoursWorked();
             case 2 -> showAttendanceHistory();
+            case 3 -> showLeaveRecords();
         }
+    }
+
+    // Sample leave records for the selected employee. MotorPH has no leave data file,
+    // so these show how LeaveRecord works: getDuration() counts calendar days across
+    // months and returns 0 unless the leave is Approved.
+    static List<LeaveRecord> sampleLeaveRecords(String employeeID) {
+        List<LeaveRecord> leaves = new ArrayList<>();
+        leaves.add(new LeaveRecord(employeeID, "Vacation", "06-10-2024", "06-12-2024", "Approved", "Paid"));
+        leaves.add(new LeaveRecord(employeeID, "Sick", "07-30-2024", "08-02-2024", "Approved", "Paid"));
+        leaves.add(new LeaveRecord(employeeID, "Emergency", "09-05-2024", "09-06-2024", "Pending", "Unpaid"));
+        return leaves;
+    }
+
+    // Builds the leave summary text; all day counts come from LeaveRecord.getDuration()
+    static String formatLeaveRecords(String employeeID, List<LeaveRecord> leaves) {
+        final int leaveCreditsPerYear = 15; // same MotorPH policy used by FinalPayPayrollProcessor
+        int paidDaysUsed = 0;
+        StringBuilder info = new StringBuilder();
+        info.append("Leave Records for Employee ").append(employeeID).append("\n");
+        info.append("(Sample records: MotorPH has no leave data file yet)\n\n");
+        for (LeaveRecord leave : leaves) {
+            info.append(leave.getLeaveType())
+                .append(" | ").append(leave.getStartDate()).append(" to ").append(leave.getEndDate())
+                .append(" | ").append(leave.getApprovalStatus())
+                .append(" | ").append(leave.getPaidStatus())
+                .append(" | ").append(leave.getDuration()).append(" day(s)\n");
+            if ("Paid".equalsIgnoreCase(leave.getPaidStatus())) {
+                paidDaysUsed += leave.getDuration(); // 0 unless Approved
+            }
+        }
+        info.append("\nApproved paid leave used: ").append(paidDaysUsed).append(" day(s)");
+        info.append("\nRemaining leave credits: ").append(Math.max(leaveCreditsPerYear - paidDaysUsed, 0))
+            .append(" of ").append(leaveCreditsPerYear);
+        return info.toString();
+    }
+
+    // Displays the leave records in a scrollable dialog, like the other attendance screens
+    private void showLeaveRecords() {
+        if (selectedEmployeeID.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select an employee!", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        JTextArea textArea = new JTextArea(formatLeaveRecords(selectedEmployeeID, sampleLeaveRecords(selectedEmployeeID)));
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(600, 250));
+
+        JOptionPane.showMessageDialog(this, scrollPane, "Leave Records", JOptionPane.INFORMATION_MESSAGE);
     }
         //This will display the daily attendance of the user. We also make it scrollable. 
     private void showDailyAttendance() {

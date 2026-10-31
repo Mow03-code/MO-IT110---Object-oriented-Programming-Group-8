@@ -1,5 +1,6 @@
 package GUI;
 
+import Backend.Employee;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -260,6 +261,28 @@ public class ManageEmployeePanelForUpdateAndDelete {
                 }
             }
 
+
+            // OOP validation: build an Employee object from the updated values before saving.
+            // The Employee setters reject a basic salary or hourly rate of 0 or less,
+            // so invalid pay values never reach the CSV (same rule as the New Employee form).
+            try {
+                new Employee(
+                        updatedEmployee[0],                                   // Employee Number
+                        updatedEmployee[1],                                   // Last Name
+                        updatedEmployee[2],                                   // First Name
+                        updatedEmployee[11],                                  // Position
+                        updatedEmployee[10],                                  // Status
+                        Double.parseDouble(updatedEmployee[13].replace(",", "")),  // Basic Salary
+                        Double.parseDouble(updatedEmployee[18].replace(",", "")),  // Hourly Rate
+                        Double.parseDouble(updatedEmployee[14].replace(",", "")),  // Rice Subsidy
+                        Double.parseDouble(updatedEmployee[15].replace(",", "")),  // Phone Allowance
+                        Double.parseDouble(updatedEmployee[16].replace(",", ""))); // Clothing Allowance
+            } catch (IllegalArgumentException ex) {
+                // NumberFormatException is also an IllegalArgumentException
+                JOptionPane.showMessageDialog(manageFrame, "OOP Validation Error: " + ex.getMessage(),
+                        "Invalid Data", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
             //Update the CSV using values from updatedEmployee
             UpdateEmployee.updateEmployeeInCSV(updatedEmployee, model);
