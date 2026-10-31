@@ -2,9 +2,11 @@ package GUI;
 
 import Backend.PayslipDispute;
 import Backend.PayslipDisputeManager;
+import Backend.PayrollDataLoader;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.time.Month;
 import java.util.UUID;
 
 /** Employee screen for submitting and tracking the logged-in employee's disputes. */
@@ -63,13 +65,25 @@ public class EmployeePayslipDisputeFrame extends JFrame {
     }
 
     private void submitDispute() {
+        String selectedMonthStr = (String) period.getSelectedItem();
+        int selectedYear = Integer.parseInt((String) year.getSelectedItem());
+        Month month = Month.valueOf(selectedMonthStr.toUpperCase());
+
+        // Validate if attendance records exist for the selected month before submitting dispute
+        if (PayrollDataLoader.getTotalHoursWorked(employeeId, month, selectedYear) == 0) {
+            JOptionPane.showMessageDialog(this, "No attendance records for " + employeeId + " in the selected month.",
+                    "No Data", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
         String details = description.getText().trim();
         if (details.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please describe the payslip issue.",
                 "Missing Description", JOptionPane.WARNING_MESSAGE);
             description.requestFocus(); return;
         }
-        String payPeriod = period.getSelectedItem() + " " + year.getSelectedItem();
+        
+        String payPeriod = selectedMonthStr + " " + selectedYear;
         String id = "DSP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         try {
             manager.submitDispute(new PayslipDispute(id, employeeId, payPeriod,
