@@ -43,7 +43,7 @@ public class MainMenu extends JFrame {
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(7, 1, 10, 10));
+        panel.setLayout(new GridLayout(8, 1, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(50, 200, 50, 200));
 
         //We added a selection drop down for the selected employee ID (modification)
@@ -54,6 +54,7 @@ public class MainMenu extends JFrame {
         JButton profileButton = new JButton("View Profile");
         JButton attendanceButton = new JButton("View Attendance");
         JButton payrollButton = new JButton("View Payroll");
+        JButton disputeButton = new JButton("My Payslip Disputes");
         JButton viewEmployeeTableButton = new JButton("View Employee Table");
         JButton logoutButton = new JButton("Log Out");
         
@@ -62,6 +63,7 @@ public class MainMenu extends JFrame {
         profileButton.addActionListener(e -> showProfile());
         attendanceButton.addActionListener(e -> showAttendance());
         payrollButton.addActionListener(e -> showPayrollMenu());
+        disputeButton.addActionListener(e -> showEmployeeDisputes());
         logoutButton.addActionListener(e -> logOut());
 
         panel.add(new JLabel("Select Employee:")); //We added a label for Employee Selector
@@ -71,10 +73,21 @@ public class MainMenu extends JFrame {
         panel.add(profileButton);
         panel.add(attendanceButton);
         panel.add(payrollButton);
+        panel.add(disputeButton);
         panel.add(viewEmployeeTableButton);
         panel.add(logoutButton);
 
         add(panel);
+    }
+
+    // Opens the logged-in/selected employee's payslip dispute screen.
+    private void showEmployeeDisputes() {
+        if (selectedEmployeeID == null || selectedEmployeeID.isBlank()) {
+            JOptionPane.showMessageDialog(this, "Please select an employee first!",
+                    "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        new EmployeePayslipDisputeFrame(selectedEmployeeID).setVisible(true);
     }
 
     //This method is used to get the Id of the Employee for the drop down menu
