@@ -9,6 +9,12 @@ Group Members:
 - Czarina Ravin Acusar
 - Maricel Abella
 
+## Login
+
+Log in using an employee's **Employee ID** and **Last Name** (not case-sensitive). Credentials are checked against the Employee Details CSV, not a separate login file.
+
+Example: Employee ID `10001`, Last Name `Garcia`
+
 ## Setup
 
 1. Clone the repository.
