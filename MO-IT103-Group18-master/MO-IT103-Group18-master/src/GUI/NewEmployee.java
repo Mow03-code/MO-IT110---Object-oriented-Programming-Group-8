@@ -136,7 +136,16 @@ public class NewEmployee {
                         textFields[i].requestFocus();
                         return;
                     }
-                    if (i == 5 || i == 6 || i == 7 || i == 8 || i == 9 || i == 13 || i == 14 || i == 15 || i == 16 || i == 17 || i == 18) {
+                    if (i == 5 || i == 6 || i == 7 || i == 8 || i == 9) {
+                        // Phone, SSS, PhilHealth, TIN, Pag-IBIG -- digits and dashes allowed
+                        if (!input.matches("[0-9-]+")) {
+                            JOptionPane.showMessageDialog(formFrame, "Please enter a valid number for: " + labels[i], "Invalid Input", JOptionPane.WARNING_MESSAGE);
+                            textFields[i].setBackground(Color.PINK);
+                            textFields[i].requestFocus();
+                            return;
+                        }
+                    } else if (i == 13 || i == 14 || i == 15 || i == 16 || i == 17 || i == 18) {
+                        // Basic Salary, allowances, rates -- numeric only, no dashes
                         if (!input.matches("\\d+(\\.\\d{1,2})?")) {
                             JOptionPane.showMessageDialog(formFrame, "Please enter a valid number for: " + labels[i], "Invalid Input", JOptionPane.WARNING_MESSAGE);
                             textFields[i].setBackground(Color.PINK);

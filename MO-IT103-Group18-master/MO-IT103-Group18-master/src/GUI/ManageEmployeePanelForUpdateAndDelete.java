@@ -246,17 +246,28 @@ public class ManageEmployeePanelForUpdateAndDelete {
 
                     // Numeric validation for designated fields
                     boolean requiresNumeric = Arrays.stream(numericFields).anyMatch(n -> n == fieldIndex);
-                    if (isChanged && requiresNumeric && !input.matches("\\d{1,3}(,\\d{3})*(\\.\\d{1,2})?")) {
-                        JOptionPane.showMessageDialog(manageFrame,
-                            "Field \"" + labels[fieldIndex] + "\" must contain a valid number.",
-                            "Invalid Input", JOptionPane.WARNING_MESSAGE);
-                        textFields[fieldIndex].setBackground(Color.PINK);
-                        textFields[fieldIndex].requestFocus();
-                        return;
+                    boolean isIdField = (fieldIndex == 5 || fieldIndex == 6 || fieldIndex == 7 || fieldIndex == 8 || fieldIndex == 9);
+                    if (isChanged && requiresNumeric) {
+                        // Phone/SSS/PhilHealth/TIN/Pag-IBIG allow dashes; money fields need a plain/comma-grouped number
+                        boolean valid = isIdField
+                            ? input.matches("[0-9-]+")
+                            : input.matches("\\d{1,3}(,\\d{3})*(\\.\\d{1,2})?");
+                        if (!valid) {
+                            JOptionPane.showMessageDialog(manageFrame,
+                                "Field \"" + labels[fieldIndex] + "\" must contain a valid number.",
+                                "Invalid Input", JOptionPane.WARNING_MESSAGE);
+                            textFields[fieldIndex].setBackground(Color.PINK);
+                            textFields[fieldIndex].requestFocus();
+                            return;
+                        }
                     }
 
                     
-                    updatedEmployee[fieldIndex] = UpdateEmployee.removeQuotation(textFields[fieldIndex].getText().trim());
+                    if (requiresNumeric) {
+                        updatedEmployee[fieldIndex] = input;  // keep as-is; parsed later via .replace(",", "")
+                    } else {
+                        updatedEmployee[fieldIndex] = UpdateEmployee.removeQuotation(input);
+                    }
                     
                 }
             }
